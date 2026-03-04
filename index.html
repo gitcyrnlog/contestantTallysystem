@@ -28,18 +28,18 @@
 
   <style>
     :root{
-      --bg:#0D0D1A;
-      --bg2:#1A1209;
-      --panel:rgba(13,13,26,.66);
-      --panel2:rgba(26,18,9,.55);
-      --gold:#C9A84C;
-      --gold2:#E8D5A3;
-      --cream:#FBF7F0;
-      --muted:#8C7A5E;
-      --border:rgba(201,168,76,0.30);
-      --danger:#E45B5B;
-      --ok:#7BE3B3;
-      --shadow: 0 18px 45px rgba(0,0,0,.40);
+      --bg:#16042E;
+      --bg2:#0A1240;
+      --panel:rgba(22,4,46,.66);
+      --panel2:rgba(10,18,64,.55);
+      --gold:#FF3CAC;
+      --gold2:#FFB3E8;
+      --cream:#FFFFFF;
+      --muted:#C4A8D8;
+      --border:rgba(255,60,172,0.38);
+      --danger:#FF4E6A;
+      --ok:#00E5A0;
+      --shadow: 0 18px 45px rgba(0,0,0,.45);
       --radius: 18px;
     }
 
@@ -50,10 +50,11 @@
       font-family: Montserrat, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       color:var(--cream);
       background:
-        radial-gradient(1200px 600px at 15% 15%, rgba(201,168,76,.16), transparent 60%),
-        radial-gradient(900px 500px at 88% 12%, rgba(232,213,163,.10), transparent 62%),
-        radial-gradient(1200px 700px at 50% 105%, rgba(201,168,76,.14), transparent 60%),
-        linear-gradient(180deg, var(--bg), var(--bg2));
+        radial-gradient(900px 500px at 8% 18%, rgba(255,60,172,.26), transparent 60%),
+        radial-gradient(700px 400px at 93% 8%, rgba(80,200,255,.20), transparent 62%),
+        radial-gradient(800px 550px at 50% 108%, rgba(255,140,60,.22), transparent 60%),
+        radial-gradient(600px 400px at 78% 55%, rgba(180,60,255,.18), transparent 60%),
+        linear-gradient(135deg, #16042E 0%, #0A1240 100%);
       overflow-x:hidden;
     }
 
@@ -86,7 +87,7 @@
     }
 
     .brand .subtitle{
-      color: rgba(251,247,240,.80);
+      color: rgba(255,255,255,.78);
       font-size: 13px;
     }
 
@@ -97,8 +98,8 @@
       padding: 8px 12px;
       border-radius: 999px;
       border:1px solid var(--border);
-      background: rgba(0,0,0,.18);
-      color: rgba(251,247,240,.92);
+      background: rgba(255,60,172,.10);
+      color: rgba(255,255,255,.92);
       font-size: 12px;
       white-space:nowrap;
     }
@@ -144,28 +145,28 @@
       user-select:none;
       text-align:left;
     }
-    .btn:hover{transform: translateY(-1px); border-color: rgba(201,168,76,.55); background: rgba(0,0,0,.18)}
+    .btn:hover{transform: translateY(-1px); border-color: rgba(255,60,172,.65); background: rgba(255,60,172,.10)}
     .btn:active{transform: translateY(0)}
 
     .btn.primary{
-      background: linear-gradient(180deg, rgba(201,168,76,.95), rgba(201,168,76,.78));
-      color: #1A1209;
-      border-color: rgba(232,213,163,.65);
+      background: linear-gradient(135deg, rgba(255,60,172,1), rgba(220,30,140,.85));
+      color: #ffffff;
+      border-color: rgba(255,179,232,.65);
     }
-    .btn.primary:hover{background: linear-gradient(180deg, rgba(201,168,76,1), rgba(201,168,76,.84));}
+    .btn.primary:hover{background: linear-gradient(135deg, rgba(255,80,185,1), rgba(240,50,160,.90));}
 
     .btn.ghost{
       background: rgba(0,0,0,.08);
     }
 
     .btn.danger{
-      border-color: rgba(228,91,91,.55);
-      color: rgba(251,247,240,.95);
-      background: rgba(228,91,91,.10);
+      border-color: rgba(255,78,106,.55);
+      color: rgba(255,255,255,.95);
+      background: rgba(255,78,106,.12);
     }
     .btn.danger:hover{
-      border-color: rgba(228,91,91,.85);
-      background: rgba(228,91,91,.14);
+      border-color: rgba(255,78,106,.85);
+      background: rgba(255,78,106,.18);
     }
 
     .btn.small{
@@ -175,7 +176,7 @@
       font-size: 13px;
     }
 
-    .muted{color: rgba(251,247,240,.72)}
+    .muted{color: rgba(255,255,255,.68)}
 
     .judgeButton{
       width: 100%;
@@ -196,7 +197,7 @@
       justify-content:space-between;
       gap: 10px;
       font-size: 12px;
-      color: rgba(251,247,240,.78);
+      color: rgba(255,255,255,.75);
     }
 
     .totalsGrid{
@@ -234,7 +235,7 @@
 
     .totalCard .meta .tt{
       font-size: 12px;
-      color: rgba(251,247,240,.78);
+      color: rgba(255,255,255,.75);
       font-weight: 800;
     }
 
@@ -262,7 +263,7 @@
     }
 
     .catHeader .max{
-      color: rgba(251,247,240,.70);
+      color: rgba(255,255,255,.68);
       font-size: 12px;
       font-weight: 800;
     }
@@ -274,7 +275,7 @@
     }
 
     .cItem{
-      border:1px solid rgba(232,213,163,.18);
+      border:1px solid rgba(255,179,232,.22);
       border-radius: 14px;
       background: rgba(0,0,0,.10);
       padding: 10px;
@@ -317,16 +318,16 @@
     .miniBar > div{
       height:100%;
       width:0;
-      background: linear-gradient(90deg, rgba(232,213,163,.75), rgba(201,168,76,1));
+      background: linear-gradient(90deg, rgba(255,179,232,.85), rgba(255,60,172,1));
       transition: width .35s ease;
     }
 
     .infoNote{
-      border: 1px solid rgba(232,213,163,.25);
-      background: rgba(0,0,0,.16);
+      border: 1px solid rgba(255,179,232,.28);
+      background: rgba(255,60,172,.06);
       padding: 12px 14px;
       border-radius: 14px;
-      color: rgba(251,247,240,.86);
+      color: rgba(255,255,255,.90);
       font-size: 13px;
       line-height: 1.35;
     }
@@ -343,7 +344,7 @@
       flex: 0 0 auto;
       border:1px solid var(--border);
       background: rgba(0,0,0,.10);
-      color: rgba(251,247,240,.90);
+      color: rgba(255,255,255,.90);
       padding: 10px 12px;
       border-radius: 999px;
       cursor:pointer;
@@ -356,8 +357,8 @@
       white-space:nowrap;
     }
     .tab.active{
-      border-color: rgba(232,213,163,.75);
-      background: rgba(201,168,76,.16);
+      border-color: rgba(255,179,232,.80);
+      background: rgba(255,60,172,.18);
       color: var(--cream);
     }
     .check{
@@ -367,14 +368,14 @@
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      border: 1px solid rgba(123,227,179,.45);
+      border: 1px solid rgba(0,229,160,.50);
       color: var(--ok);
       font-size: 12px;
-      background: rgba(123,227,179,.10);
+      background: rgba(0,229,160,.12);
     }
     .check.off{
-      border-color: rgba(201,168,76,.22);
-      color: rgba(251,247,240,.50);
+      border-color: rgba(255,60,172,.25);
+      color: rgba(255,255,255,.45);
       background: rgba(0,0,0,.08);
     }
 
@@ -416,8 +417,8 @@
       font-family: "Playfair Display", serif;
       font-weight: 700;
       letter-spacing: 1px;
-      color: rgba(251,247,240,.95);
-      text-shadow: 0 8px 18px rgba(0,0,0,.25);
+      color: rgba(255,255,255,.98);
+      text-shadow: 0 8px 18px rgba(0,0,0,.30);
       font-size: 28px;
     }
 
@@ -451,7 +452,7 @@
     }
 
     .scoreRowHeader .max{
-      color: rgba(251,247,240,.70);
+      color: rgba(255,255,255,.68);
       font-size: 12px;
       font-weight: 700;
     }
@@ -467,7 +468,7 @@
       justify-content:space-between;
       gap: 10px;
       font-size: 12px;
-      color: rgba(251,247,240,.80);
+      color: rgba(255,255,255,.75);
     }
 
     .scoreValue{
@@ -477,8 +478,8 @@
     }
 
     .totalBar{
-      border:1px solid rgba(232,213,163,.28);
-      background: rgba(0,0,0,.16);
+      border:1px solid rgba(255,179,232,.32);
+      background: rgba(255,60,172,.06);
       border-radius: 16px;
       padding: 12px 14px;
       display:flex;
@@ -497,7 +498,7 @@
       display:inline-flex;
       align-items:center;
       gap: 8px;
-      color: rgba(123,227,179,.95);
+      color: rgba(0,229,160,.98);
       font-weight: 800;
       font-size: 13px;
       opacity: 0;
@@ -514,7 +515,7 @@
     }
     .table thead th{
       text-align:left;
-      color: rgba(251,247,240,.78);
+      color: rgba(255,255,255,.72);
       font-size: 12px;
       letter-spacing: .6px;
       text-transform: uppercase;
@@ -560,13 +561,13 @@
       line-height: 1.2;
     }
     .nameCell .n .sub{
-      color: rgba(251,247,240,.70);
+      color: rgba(255,255,255,.65);
       font-size: 12px;
     }
 
     .scoreNum{
       font-weight: 900;
-      color: rgba(251,247,240,.92);
+      color: rgba(255,255,255,.92);
     }
 
     .grand{
@@ -580,7 +581,7 @@
     .bar{
       height: 10px;
       border-radius: 999px;
-      border: 1px solid rgba(232,213,163,.22);
+      border: 1px solid rgba(255,179,232,.25);
       background: rgba(0,0,0,.18);
       overflow:hidden;
       min-width: 160px;
@@ -588,14 +589,14 @@
     .bar > div{
       height:100%;
       width: 0%;
-      background: linear-gradient(90deg, rgba(232,213,163,.70), rgba(201,168,76,1));
+      background: linear-gradient(90deg, rgba(80,200,255,.85), rgba(255,60,172,1));
       transition: width .65s ease;
     }
 
     .banner{
-      border: 1px solid rgba(228,91,91,.45);
-      background: rgba(228,91,91,.10);
-      color: rgba(251,247,240,.95);
+      border: 1px solid rgba(255,78,106,.50);
+      background: rgba(255,78,106,.12);
+      color: rgba(255,255,255,.95);
       padding: 12px 14px;
       border-radius: 16px;
       font-weight: 700;
@@ -620,7 +621,7 @@
       font-size: 12px;
       letter-spacing: .6px;
       text-transform: uppercase;
-      color: rgba(251,247,240,.78);
+      color: rgba(255,255,255,.75);
       font-weight: 800;
     }
 
@@ -636,8 +637,8 @@
     }
 
     .field input:focus{
-      border-color: rgba(232,213,163,.75);
-      box-shadow: 0 0 0 3px rgba(201,168,76,.12);
+      border-color: rgba(255,179,232,.80);
+      box-shadow: 0 0 0 3px rgba(255,60,172,.16);
     }
 
     .sectionTitle{
@@ -651,7 +652,7 @@
 
     .divider{
       height: 1px;
-      background: rgba(201,168,76,.22);
+      background: rgba(255,60,172,.28);
       margin: 10px 0;
     }
 
@@ -698,7 +699,7 @@
       margin-top:14px;
     }
     .contestantTabsRow::-webkit-scrollbar{height:4px}
-    .contestantTabsRow::-webkit-scrollbar-thumb{background:rgba(201,168,76,.35);border-radius:999px}
+    .contestantTabsRow::-webkit-scrollbar-thumb{background:rgba(255,60,172,.40);border-radius:999px}
 
     .contestantTab{
       flex:0 0 auto;
@@ -717,8 +718,8 @@
       color:var(--cream);
       font-family:inherit;
     }
-    .contestantTab:hover{transform:translateY(-1px);border-color:rgba(201,168,76,.55);background:rgba(0,0,0,.18)}
-    .contestantTab.active{border-color:rgba(232,213,163,.75);background:rgba(201,168,76,.16)}
+    .contestantTab:hover{transform:translateY(-1px);border-color:rgba(255,60,172,.65);background:rgba(255,60,172,.10)}
+    .contestantTab.active{border-color:rgba(255,179,232,.80);background:rgba(255,60,172,.18)}
 
     .contestantTab .tabName{
       font-size:11px;
@@ -772,7 +773,7 @@
       padding:0;
       font-family:inherit;
     }
-    .stepBtn:hover{transform:translateY(-1px);border-color:rgba(201,168,76,.55);background:rgba(0,0,0,.22)}
+    .stepBtn:hover{transform:translateY(-1px);border-color:rgba(255,60,172,.65);background:rgba(255,60,172,.12)}
     .stepBtn:active{transform:translateY(0)}
 
     .stepValue{
@@ -1145,13 +1146,13 @@
       eventName: 'Our Pageant 2026',
       judges: ['Judge 1', 'Judge 2', 'Judge 3'],
       contestants: [
-        { name: 'Moiya Richardson',      image: 'images/Moiya.png' },
-        { name: 'Talia Small',          image: 'images/Talia.png' },
+        { name: 'Kelsie Spaulding',     image: 'images/kelsie.png' },
+        { name: 'Lasheka Hodge',        image: 'images/Lasheka.png' },
         { name: 'Justeena Rhone',       image: 'images/Justeena.png' },
         { name: 'Antoinette Robinson',  image: 'images/Antonette.png' },
-        { name: 'Lasheka Hodge',        image: 'images/Lasheka.png' },
-        { name: 'Kelsie Spaulding',     image: 'images/kelsie.png' },
+        { name: 'Talia Small',          image: 'images/Talia.png' },
         { name: 'Katia Anglin',         image: 'images/Katia.png' },
+        { name: 'Moiya Richardson',     image: 'images/Moiya.png' },
       ],
       scores: {
         '0': {},
@@ -1211,12 +1212,7 @@
       const next = {
         eventName: typeof s?.eventName === 'string' ? s.eventName : DEFAULT_STATE.eventName,
         judges: Array.isArray(s?.judges) && s.judges.length === 3 ? s.judges.map(String) : [...DEFAULT_STATE.judges],
-        contestants: Array.isArray(s?.contestants) && s.contestants.length === 7
-          ? s.contestants.map((c, i) => ({
-              name: typeof c?.name === 'string' ? c.name : DEFAULT_STATE.contestants[i].name,
-              image: DEFAULT_STATE.contestants[i].image,
-            }))
-          : DEFAULT_STATE.contestants.map(c => ({...c})),
+        contestants: DEFAULT_STATE.contestants.map(c => ({...c})),
         scores: (typeof s?.scores === 'object' && s.scores) ? s.scores : { '0': {}, '1': {}, '2': {} },
       };
 
