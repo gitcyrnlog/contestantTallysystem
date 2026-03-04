@@ -785,6 +785,9 @@
     }
     .scoreSlider{flex:1;min-width:0;width:auto}
   </style>
+  <!-- Firebase SDK (multi-device score sync) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
   <div class="app">
@@ -794,6 +797,10 @@
         <div class="subtitle" id="eventSubtitle">Judging & results tally</div>
       </div>
       <div class="pill" id="viewPill">Landing</div>
+      <div class="pill" id="syncBadge" style="display:none; gap:6px;">
+        <span class="syncDot" style="width:8px;height:8px;border-radius:50%;background:#8C7A5E;flex-shrink:0;display:inline-block;"></span>
+        <span class="syncLabel">Sync</span>
+      </div>
     </div>
 
     <!-- Landing -->
@@ -840,6 +847,9 @@
         <div class="divider"></div>
         <div id="contestantGallery" style="display:flex; flex-wrap:wrap; gap:16px; justify-content:center; padding:8px 0;"></div>
       </div>
+
+      <div style="height:14px"></div>
+      <div class="card" id="syncPanel"></div>
     </section>
 
     <!-- Judge scoring -->
@@ -940,6 +950,181 @@
 
   <script>
     'use strict';
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // MULTI-DEVICE SYNC — Firebase Realtime Database
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SETUP (~3 min, one-time):
+    //  1. Go to https://console.firebase.google.com/ → Create a project
+    //  2. Click "Add app" (</> Web) → copy the firebaseConfig values below
+    //  3. Build → Realtime Database → Create database → Start in test mode
+    //  4. Paste your values into FIREBASE_CONFIG, save, redeploy to GitHub Pages
+    //
+    //  Recommended Realtime Database rules (paste in the Rules tab):
+    //  {
+    //    "rules": { "sessions": { "$s": { ".read": true, ".write": true } } }
+    //  }
+    // ═══════════════════════════════════════════════════════════════════════════
+    const FIREBASE_CONFIG = {
+      apiKey:            "",
+      authDomain:        "",
+      databaseURL:       "",   // ← required: e.g. "https://my-app-default-rtdb.firebaseio.com"
+      projectId:         "",
+      storageBucket:     "",
+      messagingSenderId: "",
+      appId:             "",
+    };
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    const SESSION_KEY = 'pageant_session';
+    let sessionCode   = '';
+    let firebaseDB    = null;
+    let resultsUnsub  = null;
+
+    function syncReady() { return !!firebaseDB && !!sessionCode; }
+
+    function initFirebase() {
+      if (!FIREBASE_CONFIG.databaseURL) return;
+      try {
+        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+        firebaseDB = firebase.database();
+      } catch (e) { console.warn('[Sync] Firebase init failed:', e); firebaseDB = null; }
+    }
+
+    function loadSessionCode() {
+      let code = localStorage.getItem(SESSION_KEY) || '';
+      if (!code) {
+        code = Math.random().toString(36).substr(2, 6).toUpperCase();
+        localStorage.setItem(SESSION_KEY, code);
+      }
+      sessionCode = code;
+    }
+
+    function setSessionCode(code) {
+      code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+      if (!code) return false;
+      sessionCode = code;
+      localStorage.setItem(SESSION_KEY, code);
+      return true;
+    }
+
+    function syncPath() { return `sessions/${sessionCode}/scores`; }
+
+    function pushJudgeScores(judgeIndex) {
+      if (!syncReady()) return;
+      firebaseDB.ref(`${syncPath()}/${judgeIndex}`).set(state.scores[String(judgeIndex)] || {})
+        .catch(e => console.warn('[Sync] Push failed:', e));
+      updateSyncBadge('synced');
+    }
+
+    async function pullAndMergeScores() {
+      if (!syncReady()) return;
+      try {
+        const snap = await firebaseDB.ref(syncPath()).get();
+        if (!snap.exists()) return;
+        const remote = snap.val();
+        for (const jKey of ['0', '1', '2']) {
+          if (remote[jKey] && typeof remote[jKey] === 'object') state.scores[jKey] = remote[jKey];
+        }
+        saveState();
+      } catch (e) { console.warn('[Sync] Pull failed:', e); }
+    }
+
+    function subscribeResults(onUpdate) {
+      if (!syncReady()) return;
+      unsubscribeResults();
+      const ref = firebaseDB.ref(syncPath());
+      const handler = (snap) => {
+        if (!snap.exists()) return;
+        const remote = snap.val();
+        let changed = false;
+        for (const jKey of ['0', '1', '2']) {
+          if (remote[jKey] && typeof remote[jKey] === 'object') {
+            state.scores[jKey] = remote[jKey];
+            changed = true;
+          }
+        }
+        if (changed) { saveState(); onUpdate(); }
+      };
+      ref.on('value', handler);
+      resultsUnsub = () => ref.off('value', handler);
+    }
+
+    function unsubscribeResults() {
+      if (resultsUnsub) { resultsUnsub(); resultsUnsub = null; }
+    }
+
+    function updateSyncBadge(status) {
+      const badge = $('#syncBadge');
+      if (!badge) return;
+      if (!FIREBASE_CONFIG.databaseURL) { badge.style.display = 'none'; return; }
+      badge.style.display = 'inline-flex';
+      const colors = { ready: '#7BE3B3', synced: '#7BE3B3', live: '#C9A84C', error: '#E45B5B', off: '#8C7A5E' };
+      const labels = {
+        ready:  `Session · ${sessionCode}`,
+        synced: `Synced ✓ · ${sessionCode}`,
+        live:   `● Live · ${sessionCode}`,
+        error:  'Sync error',
+        off:    'Sync off',
+      };
+      badge.querySelector('.syncDot').style.background = colors[status] || colors.off;
+      badge.querySelector('.syncLabel').textContent = labels[status] || labels.off;
+    }
+
+    function renderSyncPanel() {
+      const panel = $('#syncPanel');
+      if (!panel) return;
+      panel.innerHTML = '';
+
+      const hdr = el('div', { style: 'display:flex; align-items:center; gap:10px; margin-bottom:10px;' });
+      hdr.appendChild(el('h2', { class: 'sectionTitle', style: 'margin:0', text: '🔄 Multi-Device Sync' }));
+      panel.appendChild(hdr);
+
+      if (!FIREBASE_CONFIG.databaseURL) {
+        const note = el('div', { class: 'infoNote', style: 'font-size:12px; line-height:1.6;' });
+        note.innerHTML =
+          '<strong>Enable real-time score sync across all judge devices:</strong><br>' +
+          '1. Create a free <a href="https://console.firebase.google.com/" target="_blank" style="color:var(--gold2)">Firebase project</a> (free Spark plan is enough).<br>' +
+          '2. Add a Web app → copy your <code style="color:var(--gold2)">firebaseConfig</code> values into <code style="color:var(--gold2)">FIREBASE_CONFIG</code> in this file.<br>' +
+          '3. Enable <strong>Realtime Database</strong> in test mode → redeploy to GitHub Pages.<br>' +
+          '4. All judges open the site and use the same session code — scores merge live on the Results page.';
+        panel.appendChild(note);
+        return;
+      }
+
+      const row = el('div', { style: 'display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px;' });
+      const codeInput = el('input', {
+        type: 'text', value: sessionCode, maxlength: '8', 'aria-label': 'Session code',
+        style: 'flex:1; min-width:110px; max-width:170px; border-radius:12px; border:1px solid var(--border); background:rgba(0,0,0,.20); color:var(--cream); padding:10px 12px; font-weight:800; font-size:15px; letter-spacing:2px; text-transform:uppercase; outline:none; font-family:inherit;',
+      });
+      codeInput.addEventListener('input', () => { codeInput.value = codeInput.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); });
+
+      const copyBtn = el('button', { class: 'btn small', type: 'button', text: '📋 Copy' });
+      copyBtn.addEventListener('click', async () => {
+        const ok = await copyToClipboard(sessionCode);
+        copyBtn.textContent = ok ? 'Copied ✓' : 'Copy failed';
+        setTimeout(() => { copyBtn.textContent = '📋 Copy'; }, 1500);
+      });
+
+      const joinBtn = el('button', { class: 'btn small primary', type: 'button', text: 'Join Session' });
+      joinBtn.addEventListener('click', () => {
+        if (!setSessionCode(codeInput.value)) { codeInput.style.borderColor = 'var(--danger)'; return; }
+        codeInput.style.borderColor = '';
+        renderSyncPanel();
+        updateSyncBadge('ready');
+      });
+
+      row.appendChild(codeInput);
+      row.appendChild(copyBtn);
+      row.appendChild(joinBtn);
+      panel.appendChild(row);
+
+      panel.appendChild(el('div', {
+        class: 'muted',
+        style: 'font-size:12px; line-height:1.5;',
+        text: 'Share this code with all judges. When each judge saves their scores, they are pushed to Firebase under this session. The Results page updates live as scores come in.',
+      }));
+    }
 
     const STORAGE_KEY = 'pageant_state';
 
@@ -1068,6 +1253,7 @@
     }
 
     function showView(name) {
+      if (name !== 'results') unsubscribeResults();
       const views = ['landing', 'judge', 'results', 'setup'];
       for (const v of views) {
         const node = document.getElementById(`view-${v}`);
@@ -1253,6 +1439,8 @@
           gallery.appendChild(item);
         }
       }
+      renderSyncPanel();
+      updateSyncBadge(syncReady() ? 'ready' : 'off');
     }
 
     // --- Judge view ---
@@ -1409,8 +1597,10 @@
       }
       state.scores[jKey] = out;
       saveState();
+      pushJudgeScores(currentJudgeIndex);
 
       const toast = $('#savedToast');
+      toast.textContent = syncReady() ? 'Saved + Synced ✓' : 'Saved ✓';
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 1500);
 
@@ -1419,7 +1609,17 @@
     }
 
     // --- Results ---
-    function renderResults() {
+    async function renderResults() {
+      _buildResultsTable();
+      if (syncReady()) {
+        updateSyncBadge('live');
+        await pullAndMergeScores();
+        _buildResultsTable();
+        subscribeResults(() => _buildResultsTable());
+      }
+    }
+
+    function _buildResultsTable() {
       // Update judge headers
       $('#thJudge0').textContent = state.judges[0] || 'Judge 1';
       $('#thJudge1').textContent = state.judges[1] || 'Judge 2';
@@ -1633,9 +1833,12 @@
 
     // --- Init ---
     (function init() {
+      loadSessionCode();
+      initFirebase();
       state = loadState();
       wireUI();
       window.addEventListener('hashchange', () => routeFromHash());
+      updateSyncBadge(syncReady() ? 'ready' : 'off');
       routeFromHash();
     })();
 
