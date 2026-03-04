@@ -1,0 +1,1622 @@
+<!--
+  PAGEANT SCORE SYSTEM — GitHub Pages Deployment
+  ================================================
+  1. Push this file to your GitHub repository root as index.html
+  2. Add contestant photos to an /images/ folder in the same repo
+  3. Go to Settings → Pages → Source: main branch, / (root)
+  4. Your site will be live at: https://yourusername.github.io/repo-name
+  
+  HOW TO USE:
+  - Open the site on each judge's device (phone/tablet/laptop)
+  - Each judge taps their name button and scores privately
+  - Scores are saved locally per device via localStorage
+  - NOTE: Since scores are stored per-device, for a shared tally,
+    all judges should use the SAME device, or the host should
+    consolidate scores manually from the Results page of each device.
+  - The "View Final Results" button shows the full ranked leaderboard
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Pageant Score Tally</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#0D0D1A;
+      --bg2:#1A1209;
+      --panel:rgba(13,13,26,.66);
+      --panel2:rgba(26,18,9,.55);
+      --gold:#C9A84C;
+      --gold2:#E8D5A3;
+      --cream:#FBF7F0;
+      --muted:#8C7A5E;
+      --border:rgba(201,168,76,0.30);
+      --danger:#E45B5B;
+      --ok:#7BE3B3;
+      --shadow: 0 18px 45px rgba(0,0,0,.40);
+      --radius: 18px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family: Montserrat, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color:var(--cream);
+      background:
+        radial-gradient(1200px 600px at 15% 15%, rgba(201,168,76,.16), transparent 60%),
+        radial-gradient(900px 500px at 88% 12%, rgba(232,213,163,.10), transparent 62%),
+        radial-gradient(1200px 700px at 50% 105%, rgba(201,168,76,.14), transparent 60%),
+        linear-gradient(180deg, var(--bg), var(--bg2));
+      overflow-x:hidden;
+    }
+
+    .app{
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 22px 16px 44px;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom: 14px;
+    }
+
+    .brand{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+
+    .brand h1{
+      margin:0;
+      font-family: "Playfair Display", serif;
+      font-size: clamp(24px, 4vw, 38px);
+      letter-spacing: .4px;
+      line-height: 1.05;
+    }
+
+    .brand .subtitle{
+      color: rgba(251,247,240,.80);
+      font-size: 13px;
+    }
+
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      color: rgba(251,247,240,.92);
+      font-size: 12px;
+      white-space:nowrap;
+    }
+
+    .view{
+      display:none;
+      animation: fadeIn .18s ease-out;
+    }
+    .view.active{display:block;}
+
+    @keyframes fadeIn{
+      from{opacity:0; transform: translateY(6px)}
+      to{opacity:1; transform: translateY(0)}
+    }
+
+    .card{
+      border:1px solid var(--border);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.08));
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      padding: 18px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: repeat(12, 1fr);
+      gap: 14px;
+    }
+
+    .btnRow{display:flex; flex-wrap:wrap; gap:10px; align-items:center;}
+
+    .btn{
+      appearance:none;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.12);
+      color: var(--cream);
+      padding: 12px 14px;
+      border-radius: 14px;
+      cursor:pointer;
+      font-weight: 600;
+      letter-spacing: .2px;
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+      user-select:none;
+      text-align:left;
+    }
+    .btn:hover{transform: translateY(-1px); border-color: rgba(201,168,76,.55); background: rgba(0,0,0,.18)}
+    .btn:active{transform: translateY(0)}
+
+    .btn.primary{
+      background: linear-gradient(180deg, rgba(201,168,76,.95), rgba(201,168,76,.78));
+      color: #1A1209;
+      border-color: rgba(232,213,163,.65);
+    }
+    .btn.primary:hover{background: linear-gradient(180deg, rgba(201,168,76,1), rgba(201,168,76,.84));}
+
+    .btn.ghost{
+      background: rgba(0,0,0,.08);
+    }
+
+    .btn.danger{
+      border-color: rgba(228,91,91,.55);
+      color: rgba(251,247,240,.95);
+      background: rgba(228,91,91,.10);
+    }
+    .btn.danger:hover{
+      border-color: rgba(228,91,91,.85);
+      background: rgba(228,91,91,.14);
+    }
+
+    .btn.small{
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .muted{color: rgba(251,247,240,.72)}
+
+    .judgeButton{
+      width: 100%;
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+      padding: 14px;
+    }
+
+    .judgeButton .name{
+      font-size: 16px;
+      font-weight: 800;
+    }
+
+    .judgeButton .progress{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: rgba(251,247,240,.78);
+    }
+
+    .totalsGrid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .totalCard{
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(0,0,0,.10);
+      padding: 10px;
+      display:flex;
+      gap: 10px;
+      align-items:center;
+    }
+
+    .totalCard .meta{
+      display:flex;
+      flex-direction:column;
+      gap: 2px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .totalCard .meta .nm{
+      font-weight: 900;
+      font-size: 13px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .totalCard .meta .tt{
+      font-size: 12px;
+      color: rgba(251,247,240,.78);
+      font-weight: 800;
+    }
+
+    .catCard{
+      border:1px solid var(--border);
+      border-radius: 18px;
+      background: rgba(0,0,0,.10);
+      padding: 14px;
+    }
+
+    .catHeader{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .catHeader .label{
+      font-family: "Playfair Display", serif;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .catHeader .max{
+      color: rgba(251,247,240,.70);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .catGrid{
+      display:grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+
+    .cItem{
+      border:1px solid rgba(232,213,163,.18);
+      border-radius: 14px;
+      background: rgba(0,0,0,.10);
+      padding: 10px;
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+    }
+
+    .cItemTop{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+    }
+
+    .cItemTop .nm{
+      font-weight: 800;
+      font-size: 13px;
+      line-height: 1.2;
+      flex:1;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .cItemTop .val{
+      font-weight: 900;
+      color: var(--gold2);
+      font-size: 14px;
+      white-space:nowrap;
+    }
+
+    .miniBar{
+      flex:1;
+      height: 8px;
+      border-radius: 999px;
+      border:1px solid var(--border);
+      overflow:hidden;
+      background: rgba(0,0,0,.16);
+    }
+    .miniBar > div{
+      height:100%;
+      width:0;
+      background: linear-gradient(90deg, rgba(232,213,163,.75), rgba(201,168,76,1));
+      transition: width .35s ease;
+    }
+
+    .infoNote{
+      border: 1px solid rgba(232,213,163,.25);
+      background: rgba(0,0,0,.16);
+      padding: 12px 14px;
+      border-radius: 14px;
+      color: rgba(251,247,240,.86);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .tabs{
+      display:flex;
+      flex-wrap:nowrap;
+      gap: 8px;
+      overflow-x:auto;
+      padding-bottom: 6px;
+      scrollbar-width: thin;
+    }
+    .tab{
+      flex: 0 0 auto;
+      border:1px solid var(--border);
+      background: rgba(0,0,0,.10);
+      color: rgba(251,247,240,.90);
+      padding: 10px 12px;
+      border-radius: 999px;
+      cursor:pointer;
+      font-weight: 800;
+      font-size: 13px;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      user-select:none;
+      white-space:nowrap;
+    }
+    .tab.active{
+      border-color: rgba(232,213,163,.75);
+      background: rgba(201,168,76,.16);
+      color: var(--cream);
+    }
+    .check{
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border: 1px solid rgba(123,227,179,.45);
+      color: var(--ok);
+      font-size: 12px;
+      background: rgba(123,227,179,.10);
+    }
+    .check.off{
+      border-color: rgba(201,168,76,.22);
+      color: rgba(251,247,240,.50);
+      background: rgba(0,0,0,.08);
+    }
+
+    .portraitWrap{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap: 10px;
+      padding: 8px 0 6px;
+    }
+
+    .portrait{
+      width: 108px;
+      height: 108px;
+      border-radius: 22px;
+      border: 1px solid var(--border);
+      overflow:hidden;
+      box-shadow: 0 16px 40px rgba(0,0,0,.40);
+      background: rgba(0,0,0,.20);
+      display:grid;
+      place-items:center;
+      position:relative;
+    }
+    .portrait.large{width: 140px; height: 140px; border-radius: 28px;}
+    .portrait.small{width: 72px; height: 72px; border-radius: 18px; box-shadow: none;}
+
+    .portrait img{
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      display:block;
+    }
+
+    .placeholder{
+      width:100%;
+      height:100%;
+      display:grid;
+      place-items:center;
+      font-family: "Playfair Display", serif;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: rgba(251,247,240,.95);
+      text-shadow: 0 8px 18px rgba(0,0,0,.25);
+      font-size: 28px;
+    }
+
+    .scoreForm{
+      display:flex;
+      flex-direction:column;
+      gap: 14px;
+      margin-top: 10px;
+    }
+
+    .scoreRow{
+      border:1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px 12px 10px;
+      background: rgba(0,0,0,.10);
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .scoreRowHeader{
+      display:flex;
+      align-items:baseline;
+      justify-content:space-between;
+      gap: 10px;
+    }
+
+    .scoreRowHeader .label{
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .scoreRowHeader .max{
+      color: rgba(251,247,240,.70);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    input[type="range"]{
+      width:100%;
+      accent-color: var(--gold);
+    }
+
+    .scoreRowFooter{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: rgba(251,247,240,.80);
+    }
+
+    .scoreValue{
+      font-weight: 900;
+      color: var(--gold2);
+      font-size: 13px;
+    }
+
+    .totalBar{
+      border:1px solid rgba(232,213,163,.28);
+      background: rgba(0,0,0,.16);
+      border-radius: 16px;
+      padding: 12px 14px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 12px;
+      font-weight: 800;
+    }
+    .totalBar .big{
+      font-family: "Playfair Display", serif;
+      font-size: 18px;
+      color: var(--gold2);
+    }
+
+    .savedToast{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      color: rgba(123,227,179,.95);
+      font-weight: 800;
+      font-size: 13px;
+      opacity: 0;
+      transform: translateY(2px);
+      transition: opacity .18s ease, transform .18s ease;
+      user-select:none;
+    }
+    .savedToast.show{opacity:1; transform: translateY(0)}
+
+    .table{
+      width:100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+    }
+    .table thead th{
+      text-align:left;
+      color: rgba(251,247,240,.78);
+      font-size: 12px;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      padding: 0 12px 6px;
+    }
+
+    .rowCard{
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.10));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      overflow:hidden;
+    }
+
+    .rowCard td{
+      padding: 12px;
+      vertical-align: middle;
+    }
+
+    .rank{
+      font-family: "Playfair Display", serif;
+      font-weight: 700;
+      font-size: 18px;
+      color: var(--gold2);
+      width: 70px;
+      white-space:nowrap;
+    }
+
+    .nameCell{
+      display:flex;
+      align-items:center;
+      gap: 12px;
+      min-width: 260px;
+    }
+
+    .nameCell .n{
+      display:flex;
+      flex-direction:column;
+      gap: 2px;
+    }
+    .nameCell .n .title{
+      font-weight: 900;
+      font-size: 14px;
+      line-height: 1.2;
+    }
+    .nameCell .n .sub{
+      color: rgba(251,247,240,.70);
+      font-size: 12px;
+    }
+
+    .scoreNum{
+      font-weight: 900;
+      color: rgba(251,247,240,.92);
+    }
+
+    .grand{
+      font-family: "Playfair Display", serif;
+      font-size: 18px;
+      color: var(--gold2);
+      font-weight: 800;
+      white-space:nowrap;
+    }
+
+    .bar{
+      height: 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(232,213,163,.22);
+      background: rgba(0,0,0,.18);
+      overflow:hidden;
+      min-width: 160px;
+    }
+    .bar > div{
+      height:100%;
+      width: 0%;
+      background: linear-gradient(90deg, rgba(232,213,163,.70), rgba(201,168,76,1));
+      transition: width .65s ease;
+    }
+
+    .banner{
+      border: 1px solid rgba(228,91,91,.45);
+      background: rgba(228,91,91,.10);
+      color: rgba(251,247,240,.95);
+      padding: 12px 14px;
+      border-radius: 16px;
+      font-weight: 700;
+      line-height: 1.3;
+      margin-bottom: 12px;
+    }
+
+    .formGrid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 10px;
+    }
+
+    .field{
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+    }
+
+    .field label{
+      font-size: 12px;
+      letter-spacing: .6px;
+      text-transform: uppercase;
+      color: rgba(251,247,240,.78);
+      font-weight: 800;
+    }
+
+    .field input{
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.16);
+      color: var(--cream);
+      padding: 12px 12px;
+      outline: none;
+      font-weight: 600;
+    }
+
+    .field input:focus{
+      border-color: rgba(232,213,163,.75);
+      box-shadow: 0 0 0 3px rgba(201,168,76,.12);
+    }
+
+    .sectionTitle{
+      margin: 0;
+      font-family: "Playfair Display", serif;
+      font-weight: 700;
+      font-size: 18px;
+      letter-spacing: .3px;
+      color: var(--gold2);
+    }
+
+    .divider{
+      height: 1px;
+      background: rgba(201,168,76,.22);
+      margin: 10px 0;
+    }
+
+    .twoCol{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    @media (min-width: 860px){
+      .twoCol{grid-template-columns: 1.15fr .85fr; align-items:start}
+      .formGrid{grid-template-columns: 1fr 1fr}
+      .field.full{grid-column: 1 / -1}
+    }
+
+    @media (max-width: 740px){
+      .table thead{display:none}
+      .rowCard td{padding: 10px 12px}
+      .nameCell{min-width: 0}
+      .rank{width: 64px}
+      .bar{min-width: 110px}
+    }
+
+    .srOnly{
+      position:absolute;
+      width:1px;
+      height:1px;
+      padding:0;
+      margin:-1px;
+      overflow:hidden;
+      clip:rect(0,0,0,0);
+      white-space:nowrap;
+      border:0;
+    }
+
+    /* === Contestant tabs (judge view) === */
+    .contestantTabsRow{
+      display:flex;
+      flex-wrap:nowrap;
+      gap:8px;
+      overflow-x:auto;
+      padding:10px 0 6px;
+      scrollbar-width:thin;
+      margin-top:14px;
+    }
+    .contestantTabsRow::-webkit-scrollbar{height:4px}
+    .contestantTabsRow::-webkit-scrollbar-thumb{background:rgba(201,168,76,.35);border-radius:999px}
+
+    .contestantTab{
+      flex:0 0 auto;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+      padding:10px 10px 8px;
+      border:1px solid var(--border);
+      border-radius:16px;
+      background:rgba(0,0,0,.10);
+      cursor:pointer;
+      min-width:82px;
+      max-width:100px;
+      transition:transform .08s ease, border-color .12s ease, background .12s ease;
+      color:var(--cream);
+      font-family:inherit;
+    }
+    .contestantTab:hover{transform:translateY(-1px);border-color:rgba(201,168,76,.55);background:rgba(0,0,0,.18)}
+    .contestantTab.active{border-color:rgba(232,213,163,.75);background:rgba(201,168,76,.16)}
+
+    .contestantTab .tabName{
+      font-size:11px;
+      font-weight:700;
+      text-align:center;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      max-width:80px;
+      line-height:1.2;
+    }
+
+    /* === Active contestant scoring panel === */
+    .cPanelHeader{
+      display:flex;
+      align-items:center;
+      gap:16px;
+      padding:12px 0 16px;
+      border-bottom:1px solid var(--border);
+      margin-bottom:16px;
+    }
+    .cPanelInfo{display:flex;flex-direction:column;gap:4px}
+    .cPanelName{font-family:"Playfair Display",serif;font-weight:700;font-size:22px;line-height:1.15}
+    .cPanelTotal{font-weight:800;color:var(--gold2);font-size:14px}
+
+    /* === Stepper +/- score controls === */
+    .stepperRow{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin-top:6px;
+    }
+    .stepBtn{
+      appearance:none;
+      -webkit-appearance:none;
+      border:1px solid var(--border);
+      background:rgba(0,0,0,.14);
+      color:var(--cream);
+      width:40px;
+      height:40px;
+      border-radius:10px;
+      font-size:24px;
+      font-weight:900;
+      line-height:1;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      flex-shrink:0;
+      transition:transform .08s ease, border-color .12s ease, background .12s ease;
+      padding:0;
+      font-family:inherit;
+    }
+    .stepBtn:hover{transform:translateY(-1px);border-color:rgba(201,168,76,.55);background:rgba(0,0,0,.22)}
+    .stepBtn:active{transform:translateY(0)}
+
+    .stepValue{
+      font-weight:900;
+      color:var(--gold2);
+      font-size:22px;
+      min-width:44px;
+      text-align:center;
+      flex-shrink:0;
+    }
+    .scoreSlider{flex:1;min-width:0;width:auto}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <h1 id="eventTitle">Pageant Score System</h1>
+        <div class="subtitle" id="eventSubtitle">Judging & results tally</div>
+      </div>
+      <div class="pill" id="viewPill">Landing</div>
+    </div>
+
+    <!-- Landing -->
+    <section class="view" id="view-landing" aria-label="Landing">
+      <div class="twoCol">
+        <div class="card">
+          <h2 class="sectionTitle">Judge Panel</h2>
+          <div class="divider"></div>
+          <div class="grid" id="judgeButtons"></div>
+
+          <div style="height:12px"></div>
+
+          <div class="btnRow">
+            <button class="btn primary" id="btnResults">View Final Results</button>
+            <button class="btn" id="btnSetup">⚙ Configure Event</button>
+            <button class="btn" id="btnSimulate">Simulate Scores</button>
+          </div>
+
+          <div style="height:12px"></div>
+          <div class="infoNote">
+            <strong>Important:</strong> Scores are stored with <strong>localStorage</strong>, which is per-device.
+            For a single-device workflow, judges should take turns on the same device.
+            If judges use different devices, scores won’t automatically merge.
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="sectionTitle">Scoring Summary</h2>
+          <div class="divider"></div>
+          <div class="muted" style="font-size:13px; line-height:1.45">
+            3 judges score 7 categories (Most Congenial is excluded from numeric scoring).<br>
+            Max per judge: <strong>85</strong> • Max grand total: <strong>255</strong>
+          </div>
+          <div style="height:12px"></div>
+          <div class="muted" style="font-size:12px; line-height:1.45">
+            Privacy note: judges only see their own scores in the scoring view.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Judge scoring -->
+    <section class="view" id="view-judge" aria-label="Judge Scoring">
+      <div class="card">
+        <div class="btnRow" style="justify-content:space-between; align-items:flex-start">
+          <div>
+            <div class="pill" id="judgeIdentity">Judge</div>
+            <div class="muted" style="font-size:12px; margin-top:6px">Score each category for every contestant — your scores are private.</div>
+          </div>
+          <div class="btnRow">
+            <button class="btn small ghost" id="btnBackToLanding">Back to Panel</button>
+          </div>
+        </div>
+
+        <!-- Contestant totals strip -->
+        <div class="totalsGrid" id="judgeTotals"></div>
+
+        <!-- Contestant tabs navigation -->
+        <div class="contestantTabsRow" id="contestantTabs"></div>
+
+        <!-- Active contestant scoring panel -->
+        <div class="scoreForm" id="judgeCategories" style="margin-top:10px"></div>
+
+        <div style="height:10px"></div>
+        <div class="btnRow" style="justify-content:space-between">
+          <div class="btnRow">
+            <button class="btn primary" id="btnSaveScore">Save Scores</button>
+            <span class="savedToast" id="savedToast">Saved ✓</span>
+          </div>
+          <div class="muted" style="font-size:12px">Scores are private to this judge.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section class="view" id="view-results" aria-label="Results">
+      <div class="card">
+        <div class="btnRow" style="justify-content:space-between; align-items:flex-start">
+          <div>
+            <h2 class="sectionTitle" style="margin-bottom:6px">Final Results</h2>
+            <div class="muted" style="font-size:12px">Ranked by grand total (max 255)</div>
+          </div>
+          <div class="btnRow">
+            <button class="btn small" id="btnRefreshResults">↻ Refresh</button>
+            <button class="btn small ghost" id="btnBackFromResults">← Back</button>
+          </div>
+        </div>
+
+        <div id="resultsBanner" style="display:none" class="banner"></div>
+
+        <div style="overflow-x:auto">
+          <table class="table" aria-label="Leaderboard">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Contestant</th>
+                <th id="thJudge0">Judge 1</th>
+                <th id="thJudge1">Judge 2</th>
+                <th id="thJudge2">Judge 3</th>
+                <th>Grand</th>
+                <th>Progress</th>
+              </tr>
+            </thead>
+            <tbody id="resultsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Setup -->
+    <section class="view" id="view-setup" aria-label="Setup">
+      <div class="card">
+        <div class="btnRow" style="justify-content:space-between; align-items:flex-start">
+          <div>
+            <h2 class="sectionTitle" style="margin-bottom:6px">Configure Event</h2>
+            <div class="muted" style="font-size:12px">Edit event, judge names, contestant names.</div>
+          </div>
+          <div class="btnRow">
+            <button class="btn small danger" id="btnResetScores">Reset All Scores</button>
+          </div>
+        </div>
+
+        <div class="formGrid" id="setupForm"></div>
+
+        <div style="height:10px"></div>
+        <div class="btnRow" style="justify-content:space-between">
+          <div class="btnRow">
+            <button class="btn primary" id="btnSaveSetup">Save & Apply</button>
+            <button class="btn" id="btnCancelSetup">Cancel</button>
+          </div>
+          <div class="muted" style="font-size:12px">Reset only clears scores (names stay).</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    'use strict';
+
+    const STORAGE_KEY = 'pageant_state';
+
+    // Scored categories only (Most Congenial excluded)
+    const CATEGORIES = [
+      { id: 'mostAware',      label: 'Most Aware',          max: 10 },
+      { id: 'mostPoised',     label: 'Most Poised',         max: 10 },
+      { id: 'bestTalent',     label: 'Best Talent',         max: 10 },
+      { id: 'mostPopular',    label: 'Most Popular',        max: 5  },
+      { id: 'livingGem',      label: 'The Living Gem',      max: 15 },
+      { id: 'mostConfident',  label: 'Most Confident',      max: 10 },
+      { id: 'bestCreative',   label: 'Best Creative Piece', max: 25 },
+    ];
+    const MAX_PER_JUDGE = 85;
+    const MAX_GRAND_TOTAL = 255;
+
+    const DEFAULT_STATE = {
+      eventName: 'Our Pageant 2026',
+      judges: ['Judge 1', 'Judge 2', 'Judge 3'],
+      contestants: [
+        { name: 'Moiya Richardson',      image: 'images/moiya.jpg' },
+        { name: 'Talia Small',          image: 'images/talia.jpg' },
+        { name: 'Justeena Rhone',       image: 'images/justeena.jpg' },
+        { name: 'Antoinette Robinson',  image: 'images/antoinette.jpg' },
+        { name: 'Lasheka Hodge',        image: 'images/lasheka.jpg' },
+        { name: 'Kelsie Spaulding',     image: 'images/kelsie.jpg' },
+        { name: 'Katia Anglin',         image: 'images/katia.jpg' },
+      ],
+      scores: {
+        '0': {},
+        '1': {},
+        '2': {},
+      }
+    };
+
+    const PLACEHOLDER_THEMES = [
+      { a: '#F08CA0', b: '#C13D6B' }, // rose
+      { a: '#58D6C3', b: '#2B8EA5' }, // teal
+      { a: '#C9B6FF', b: '#7A6DF2' }, // lavender
+      { a: '#F1C277', b: '#C98B2C' }, // amber
+      { a: '#88C0A3', b: '#3B8A67' }, // sage
+      { a: '#F3B6C5', b: '#BA5B72' }, // blush
+      { a: '#7C87FF', b: '#3940B8' }, // indigo
+    ];
+
+    /** @type {ReturnType<typeof loadState>} */
+    let state = null;
+
+    let currentJudgeIndex = null;
+    let draftJudgeScores = null; // { [contestantIndex]: { [categoryId]: number } }
+    let currentContestantTabIndex = 0;
+
+    const $ = (sel) => document.querySelector(sel);
+    const el = (tag, attrs = {}, children = []) => {
+      const node = document.createElement(tag);
+      for (const [k, v] of Object.entries(attrs)) {
+        if (k === 'class') node.className = v;
+        else if (k === 'dataset') Object.assign(node.dataset, v);
+        else if (k.startsWith('on') && typeof v === 'function') node.addEventListener(k.slice(2), v);
+        else if (k === 'text') node.textContent = v;
+        else node.setAttribute(k, v);
+      }
+      for (const child of children) node.appendChild(child);
+      return node;
+    };
+
+    function safeInt(n, fallback = 0) {
+      const x = Number(n);
+      return Number.isFinite(x) ? Math.trunc(x) : fallback;
+    }
+
+    function clamp(n, min, max) {
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function initialsFromName(name) {
+      const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 0) return '??';
+      if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+
+    function normalizeStateShape(s) {
+      const next = {
+        eventName: typeof s?.eventName === 'string' ? s.eventName : DEFAULT_STATE.eventName,
+        judges: Array.isArray(s?.judges) && s.judges.length === 3 ? s.judges.map(String) : [...DEFAULT_STATE.judges],
+        contestants: Array.isArray(s?.contestants) && s.contestants.length === 7
+          ? s.contestants.map((c, i) => ({
+              name: typeof c?.name === 'string' ? c.name : DEFAULT_STATE.contestants[i].name,
+              image: typeof c?.image === 'string' ? c.image : DEFAULT_STATE.contestants[i].image,
+            }))
+          : DEFAULT_STATE.contestants.map(c => ({...c})),
+        scores: (typeof s?.scores === 'object' && s.scores) ? s.scores : { '0': {}, '1': {}, '2': {} },
+      };
+
+      for (let j = 0; j < 3; j++) {
+        const key = String(j);
+        if (!next.scores[key] || typeof next.scores[key] !== 'object') next.scores[key] = {};
+      }
+
+      return next;
+    }
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) {
+          const seeded = normalizeStateShape(DEFAULT_STATE);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+          return seeded;
+        }
+        const parsed = JSON.parse(raw);
+        const normalized = normalizeStateShape(parsed);
+        // Save back normalized shape in case it was missing fields
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+        return normalized;
+      } catch {
+        const seeded = normalizeStateShape(DEFAULT_STATE);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+        return seeded;
+      }
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function showView(name) {
+      const views = ['landing', 'judge', 'results', 'setup'];
+      for (const v of views) {
+        const node = document.getElementById(`view-${v}`);
+        node.classList.toggle('active', v === name);
+      }
+      const labelMap = {
+        landing: 'Landing',
+        judge: 'Judge Scoring',
+        results: 'Results',
+        setup: 'Setup'
+      };
+      $('#viewPill').textContent = labelMap[name] || name;
+
+      $('#eventTitle').textContent = state.eventName || 'Pageant Score System';
+      $('#eventSubtitle').textContent = name === 'results'
+        ? 'Final leaderboard reveal'
+        : 'Judging & results tally';
+
+      if (name === 'landing') renderLanding();
+      if (name === 'judge') renderJudgeView();
+      if (name === 'results') renderResults();
+      if (name === 'setup') renderSetup();
+
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+
+    function routeFromHash() {
+      const h = String(location.hash || '').replace(/^#/, '').trim();
+      if (!h) {
+        currentJudgeIndex = null;
+        showView('landing');
+        return;
+      }
+      if (h === 'results') {
+        showView('results');
+        return;
+      }
+      if (h === 'setup') {
+        showView('setup');
+        return;
+      }
+      const m = h.match(/^judge=(\d+)$/);
+      if (m) {
+        const idx = clamp(safeInt(m[1], 0), 0, 2);
+        currentJudgeIndex = idx;
+        showView('judge');
+        return;
+      }
+
+      currentJudgeIndex = null;
+      showView('landing');
+    }
+
+    async function copyToClipboard(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    function scoreCardFor(judgeIndex, contestantIndex) {
+      const jKey = String(judgeIndex);
+      const cKey = String(contestantIndex);
+      const existing = state.scores?.[jKey]?.[cKey];
+      if (existing && typeof existing === 'object') return existing;
+      return null;
+    }
+
+    function isScoreCardComplete(card) {
+      if (!card || typeof card !== 'object') return false;
+      for (const cat of CATEGORIES) {
+        const v = card[cat.id];
+        if (!Number.isFinite(Number(v))) return false;
+        const iv = safeInt(v);
+        if (iv < 0 || iv > cat.max) return false;
+      }
+      return true;
+    }
+
+    function subtotalFromCard(card) {
+      if (!card || typeof card !== 'object') return 0;
+      let sum = 0;
+      for (const cat of CATEGORIES) {
+        const v = safeInt(card[cat.id], 0);
+        sum += clamp(v, 0, cat.max);
+      }
+      return sum;
+    }
+
+    function judgeProgress(judgeIndex) {
+      let complete = 0;
+      for (let c = 0; c < state.contestants.length; c++) {
+        const card = scoreCardFor(judgeIndex, c);
+        if (isScoreCardComplete(card)) complete++;
+      }
+      return complete;
+    }
+
+    function makePortrait(contestantIndex, sizeClass) {
+      const c = state.contestants[contestantIndex];
+      const theme = PLACEHOLDER_THEMES[contestantIndex % PLACEHOLDER_THEMES.length];
+      const wrap = el('div', { class: `portrait ${sizeClass || ''}`.trim() });
+
+      const img = el('img', {
+        src: c.image,
+        alt: c.name,
+      });
+
+      const placeholder = el('div', {
+        class: 'placeholder',
+        style: `background: radial-gradient(100% 90% at 35% 20%, ${theme.a}, ${theme.b});`,
+        text: initialsFromName(c.name)
+      });
+
+      img.addEventListener('error', () => {
+        img.style.display = 'none';
+        placeholder.style.display = 'grid';
+      });
+      img.addEventListener('load', () => {
+        img.style.display = 'block';
+        placeholder.style.display = 'none';
+      });
+
+      // Start with placeholder visible until image loads
+      placeholder.style.display = 'grid';
+
+      wrap.appendChild(img);
+      wrap.appendChild(placeholder);
+      return wrap;
+    }
+
+    // --- Landing ---
+    function renderLanding() {
+      const container = $('#judgeButtons');
+      container.innerHTML = '';
+      container.style.gridTemplateColumns = 'repeat(12, 1fr)';
+
+      for (let j = 0; j < 3; j++) {
+        const done = judgeProgress(j);
+        const pct = Math.round((done / 7) * 100);
+
+        const col = el('div', { style: 'grid-column: span 12;' });
+        col.style.gridColumn = 'span 12';
+        if (window.matchMedia('(min-width: 860px)').matches) col.style.gridColumn = 'span 4';
+
+        const btn = el('a', {
+          class: 'btn judgeButton',
+          href: `./index.html#judge=${j}`,
+          style: 'text-decoration:none; display:flex;'
+        });
+
+        btn.appendChild(el('div', { class: 'name', text: state.judges[j] || `Judge ${j + 1}` }));
+
+        const prog = el('div', { class: 'progress' });
+        prog.appendChild(el('span', { text: `${done} / 7 scored` }));
+        const bar = el('div', { class: 'miniBar' }, [el('div', { style: `width:${pct}%;` })]);
+        prog.appendChild(bar);
+
+        btn.appendChild(prog);
+
+        col.appendChild(btn);
+        container.appendChild(col);
+      }
+
+      // Update results table headers with judge names
+      $('#thJudge0').textContent = state.judges[0] || 'Judge 1';
+      $('#thJudge1').textContent = state.judges[1] || 'Judge 2';
+      $('#thJudge2').textContent = state.judges[2] || 'Judge 3';
+    }
+
+    // --- Judge view ---
+    function renderJudgeView() {
+      const j = currentJudgeIndex;
+      if (j === null || j === undefined) {
+        showView('landing');
+        return;
+      }
+
+      $('#judgeIdentity').textContent = `${state.judges[j] || `Judge ${j + 1}`} — Private Scoring`;
+
+      // Seed draft scores from saved state (or zeroes)
+      const jKey = String(j);
+      const existing = (state.scores?.[jKey] && typeof state.scores[jKey] === 'object') ? state.scores[jKey] : {};
+      draftJudgeScores = {};
+      for (let c = 0; c < state.contestants.length; c++) {
+        const cKey = String(c);
+        const saved = (existing[cKey] && typeof existing[cKey] === 'object') ? existing[cKey] : {};
+        const card = {};
+        for (const cat of CATEGORIES) card[cat.id] = clamp(safeInt(saved[cat.id], 0), 0, cat.max);
+        draftJudgeScores[cKey] = card;
+      }
+
+      currentContestantTabIndex = 0;
+      renderJudgeTotals();
+      renderContestantTabs();
+      renderActiveContestantPanel();
+      $('#savedToast').classList.remove('show');
+    }
+
+    function renderJudgeTotals() {
+      const wrap = $('#judgeTotals');
+      wrap.innerHTML = '';
+      for (let c = 0; c < state.contestants.length; c++) {
+        const cKey = String(c);
+        const card = draftJudgeScores?.[cKey] || {};
+        const total = subtotalFromCard(card);
+        const complete = isScoreCardComplete(card);
+
+        const item = el('div', { class: 'totalCard' });
+        item.appendChild(makePortrait(c, 'small'));
+        const meta = el('div', { class: 'meta' });
+        meta.appendChild(el('div', { class: 'nm', text: state.contestants[c].name }));
+        meta.appendChild(el('div', { class: 'tt', text: `${total} / ${MAX_PER_JUDGE}` }));
+        item.appendChild(meta);
+        item.appendChild(el('span', { class: `check ${complete ? '' : 'off'}`, text: complete ? '✓' : '•' }));
+        wrap.appendChild(item);
+      }
+    }
+
+    function renderContestantTabs() {
+      const wrap = $('#contestantTabs');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+      for (let c = 0; c < state.contestants.length; c++) {
+        const isActive = c === currentContestantTabIndex;
+        const card = draftJudgeScores?.[String(c)];
+        const complete = isScoreCardComplete(card);
+
+        const tab = el('button', { class: `contestantTab${isActive ? ' active' : ''}`, type: 'button' });
+        tab.appendChild(makePortrait(c, 'small'));
+        tab.appendChild(el('div', { class: 'tabName', text: state.contestants[c].name }));
+        tab.appendChild(el('span', { class: `check ${complete ? '' : 'off'}`, text: complete ? '✓' : '•' }));
+
+        tab.addEventListener('click', () => {
+          currentContestantTabIndex = c;
+          renderContestantTabs();
+          renderActiveContestantPanel();
+        });
+
+        wrap.appendChild(tab);
+      }
+    }
+
+    function renderActiveContestantPanel() {
+      const container = $('#judgeCategories');
+      container.innerHTML = '';
+
+      const c = currentContestantTabIndex;
+      const cKey = String(c);
+      const contestant = state.contestants[c];
+      const card = draftJudgeScores[cKey];
+
+      // Panel header: portrait + name + running total
+      const panelHeader = el('div', { class: 'cPanelHeader' });
+      panelHeader.appendChild(makePortrait(c, 'large'));
+      const panelInfo = el('div', { class: 'cPanelInfo' });
+      panelInfo.appendChild(el('div', { class: 'cPanelName', text: contestant.name }));
+      const totalEl = el('div', { class: 'cPanelTotal', text: `${subtotalFromCard(card)} / ${MAX_PER_JUDGE} pts` });
+      panelInfo.appendChild(totalEl);
+      panelHeader.appendChild(panelInfo);
+      container.appendChild(panelHeader);
+
+      // One score row per category — slider + +/− stepper
+      for (const cat of CATEGORIES) {
+        const value = clamp(safeInt(card[cat.id], 0), 0, cat.max);
+
+        const row = el('div', { class: 'scoreRow' });
+
+        const rowHeader = el('div', { class: 'scoreRowHeader' });
+        rowHeader.appendChild(el('div', { class: 'label', text: cat.label }));
+        rowHeader.appendChild(el('div', { class: 'max', text: `Max ${cat.max}` }));
+        row.appendChild(rowHeader);
+
+        const stepper = el('div', { class: 'stepperRow' });
+        const btnMinus = el('button', { class: 'stepBtn', type: 'button', text: '−' });
+        const valDisplay = el('div', { class: 'stepValue', text: String(value) });
+        const range = el('input', {
+          type: 'range',
+          min: '0',
+          max: String(cat.max),
+          step: '1',
+          value: String(value),
+          class: 'scoreSlider',
+          'aria-label': `${cat.label} score for ${contestant.name}`,
+        });
+        const btnPlus = el('button', { class: 'stepBtn', type: 'button', text: '+' });
+
+        const updateScore = (v) => {
+          const clamped = clamp(v, 0, cat.max);
+          card[cat.id] = clamped;
+          valDisplay.textContent = String(clamped);
+          range.value = String(clamped);
+          totalEl.textContent = `${subtotalFromCard(card)} / ${MAX_PER_JUDGE} pts`;
+          renderJudgeTotals();
+        };
+
+        btnMinus.addEventListener('click', () => updateScore(safeInt(card[cat.id], 0) - 1));
+        btnPlus.addEventListener('click', () => updateScore(safeInt(card[cat.id], 0) + 1));
+        range.addEventListener('input', () => updateScore(safeInt(range.value, 0)));
+
+        stepper.appendChild(btnMinus);
+        stepper.appendChild(valDisplay);
+        stepper.appendChild(range);
+        stepper.appendChild(btnPlus);
+        row.appendChild(stepper);
+
+        container.appendChild(row);
+      }
+    }
+
+    function saveJudgeScores() {
+      const jKey = String(currentJudgeIndex);
+      if (!state.scores[jKey] || typeof state.scores[jKey] !== 'object') state.scores[jKey] = {};
+
+      const out = {};
+      for (let c = 0; c < state.contestants.length; c++) {
+        const cKey = String(c);
+        const card = draftJudgeScores?.[cKey] || {};
+        const normalized = {};
+        for (const cat of CATEGORIES) normalized[cat.id] = clamp(safeInt(card[cat.id], 0), 0, cat.max);
+        out[cKey] = normalized;
+      }
+      state.scores[jKey] = out;
+      saveState();
+
+      const toast = $('#savedToast');
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 1500);
+
+      renderLanding();
+      renderJudgeTotals();
+    }
+
+    // --- Results ---
+    function renderResults() {
+      // Update judge headers
+      $('#thJudge0').textContent = state.judges[0] || 'Judge 1';
+      $('#thJudge1').textContent = state.judges[1] || 'Judge 2';
+      $('#thJudge2').textContent = state.judges[2] || 'Judge 3';
+
+      const results = [];
+      let pendingScorecards = 0;
+      const totalScorecards = 3 * state.contestants.length;
+
+      for (let c = 0; c < state.contestants.length; c++) {
+        const perJudge = [];
+        for (let j = 0; j < 3; j++) {
+          const card = scoreCardFor(j, c);
+          const complete = isScoreCardComplete(card);
+          if (!complete) pendingScorecards++;
+          perJudge.push({
+            judgeIndex: j,
+            subtotal: subtotalFromCard(card),
+            complete,
+          });
+        }
+
+        const grandTotal = perJudge.reduce((acc, x) => acc + x.subtotal, 0);
+        results.push({
+          contestantIndex: c,
+          name: state.contestants[c].name,
+          perJudge,
+          grandTotal,
+        });
+      }
+
+      results.sort((a, b) => {
+        if (b.grandTotal !== a.grandTotal) return b.grandTotal - a.grandTotal;
+        return a.name.localeCompare(b.name);
+      });
+
+      const banner = $('#resultsBanner');
+      if (pendingScorecards > 0) {
+        banner.style.display = 'block';
+        banner.textContent = `Warning: ${pendingScorecards} scorecard(s) still pending (out of ${totalScorecards}). Showing available totals.`;
+      } else {
+        banner.style.display = 'none';
+        banner.textContent = '';
+      }
+
+      const body = $('#resultsBody');
+      body.innerHTML = '';
+
+      for (let i = 0; i < results.length; i++) {
+        const r = results[i];
+        const rankLabel = i === 0 ? '♛ 1' : String(i + 1);
+
+        const tr = document.createElement('tr');
+        tr.className = 'rowCard';
+
+        const tdRank = el('td', { class: 'rank' });
+        tdRank.textContent = rankLabel;
+
+        const tdName = el('td');
+        const nameCell = el('div', { class: 'nameCell' });
+        nameCell.appendChild(makePortrait(r.contestantIndex, 'small'));
+        const nameBlock = el('div', { class: 'n' });
+        nameBlock.appendChild(el('div', { class: 'title', text: r.name }));
+        nameBlock.appendChild(el('div', { class: 'sub', text: `Contestant ${r.contestantIndex + 1}` }));
+        nameCell.appendChild(nameBlock);
+        tdName.appendChild(nameCell);
+
+        const tdJ0 = el('td', { class: 'scoreNum' });
+        const tdJ1 = el('td', { class: 'scoreNum' });
+        const tdJ2 = el('td', { class: 'scoreNum' });
+
+        const judgeCells = [tdJ0, tdJ1, tdJ2];
+        for (const pj of r.perJudge) {
+          const cell = judgeCells[pj.judgeIndex];
+          const suffix = pj.complete ? '' : ' *';
+          cell.textContent = String(pj.subtotal) + suffix;
+          cell.title = pj.complete ? 'Complete' : 'Incomplete (missing some category scores)';
+        }
+
+        const tdGrand = el('td', { class: 'grand', text: String(r.grandTotal) });
+
+        const tdBar = el('td');
+        const bar = el('div', { class: 'bar' });
+        const fill = el('div', { style: 'width:0%' });
+        bar.appendChild(fill);
+        tdBar.appendChild(bar);
+
+        tr.appendChild(tdRank);
+        tr.appendChild(tdName);
+        tr.appendChild(tdJ0);
+        tr.appendChild(tdJ1);
+        tr.appendChild(tdJ2);
+        tr.appendChild(tdGrand);
+        tr.appendChild(tdBar);
+
+        body.appendChild(tr);
+
+        const pct = Math.round((r.grandTotal / MAX_GRAND_TOTAL) * 100);
+        requestAnimationFrame(() => {
+          fill.style.width = `${clamp(pct, 0, 100)}%`;
+        });
+      }
+    }
+
+    // --- Setup ---
+    function renderSetup() {
+      const form = $('#setupForm');
+      form.innerHTML = '';
+
+      form.appendChild(el('div', { class: 'field full' }, [
+        el('label', { text: 'Event name' }),
+        el('input', { id: 'setupEventName', type: 'text', value: state.eventName || '' })
+      ]));
+
+      for (let j = 0; j < 3; j++) {
+        form.appendChild(el('div', { class: 'field' }, [
+          el('label', { text: `Judge ${j + 1} name` }),
+          el('input', { id: `setupJudge${j}`, type: 'text', value: state.judges[j] || `Judge ${j + 1}` })
+        ]));
+      }
+
+      form.appendChild(el('div', { class: 'field full' }, [
+        el('label', { text: 'Contestant names' }),
+        el('div', { class: 'muted', style: 'font-size:12px; line-height:1.4' , text: 'Photos are loaded from /images/*.jpg; placeholders appear until photos are added.' })
+      ]));
+
+      for (let c = 0; c < state.contestants.length; c++) {
+        form.appendChild(el('div', { class: 'field' }, [
+          el('label', { text: `Contestant ${c + 1}` }),
+          el('input', { id: `setupContestant${c}`, type: 'text', value: state.contestants[c].name || '' })
+        ]));
+      }
+    }
+
+    function applySetup() {
+      const nextEventName = String($('#setupEventName').value || '').trim() || DEFAULT_STATE.eventName;
+      const nextJudges = [];
+      for (let j = 0; j < 3; j++) {
+        nextJudges.push(String($(`#setupJudge${j}`).value || '').trim() || `Judge ${j + 1}`);
+      }
+
+      const nextContestants = state.contestants.map((c, idx) => {
+        const nextName = String($(`#setupContestant${idx}`).value || '').trim() || DEFAULT_STATE.contestants[idx].name;
+        return { ...c, name: nextName };
+      });
+
+      state.eventName = nextEventName;
+      state.judges = nextJudges;
+      state.contestants = nextContestants;
+      saveState();
+    }
+
+    function resetAllScores() {
+      if (!confirm('Reset ALL scores? This cannot be undone.\n\nContestant and judge names will NOT be reset.')) return;
+      state.scores = { '0': {}, '1': {}, '2': {} };
+      saveState();
+      alert('Scores cleared.');
+      renderLanding();
+    }
+
+    function simulateAllScores() {
+      const ok = confirm(
+        'Simulate scores for ALL judges and contestants?\n\nThis will overwrite any existing scores on this device.'
+      );
+      if (!ok) return;
+
+      const nextScores = { '0': {}, '1': {}, '2': {} };
+
+      for (let j = 0; j < 3; j++) {
+        const jKey = String(j);
+        for (let c = 0; c < state.contestants.length; c++) {
+          const cKey = String(c);
+          const card = {};
+          for (const cat of CATEGORIES) {
+            card[cat.id] = Math.floor(Math.random() * (cat.max + 1));
+          }
+          nextScores[jKey][cKey] = card;
+        }
+      }
+
+      state.scores = nextScores;
+      saveState();
+      alert('Simulation complete. You can now view Results or open any Judge scoring view.');
+      renderLanding();
+    }
+
+    // --- Wire up buttons ---
+    function wireUI() {
+      $('#btnResults').addEventListener('click', () => location.hash = 'results');
+      $('#btnSetup').addEventListener('click', () => location.hash = 'setup');
+      $('#btnSimulate').addEventListener('click', () => simulateAllScores());
+
+      $('#btnBackToLanding').addEventListener('click', () => {
+        currentJudgeIndex = null;
+        location.hash = '';
+      });
+
+      $('#btnSaveScore').addEventListener('click', () => saveJudgeScores());
+
+      $('#btnBackFromResults').addEventListener('click', () => location.hash = '');
+      $('#btnRefreshResults').addEventListener('click', () => renderResults());
+
+      $('#btnSaveSetup').addEventListener('click', () => {
+        applySetup();
+        location.hash = '';
+      });
+
+      $('#btnCancelSetup').addEventListener('click', () => location.hash = '');
+      $('#btnResetScores').addEventListener('click', () => resetAllScores());
+    }
+
+    // --- Init ---
+    (function init() {
+      state = loadState();
+      wireUI();
+      window.addEventListener('hashchange', () => routeFromHash());
+      routeFromHash();
+    })();
+
+  </script>
+</body>
+</html>
