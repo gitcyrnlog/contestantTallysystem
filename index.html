@@ -815,8 +815,8 @@
           <h2 class="sectionTitle">Scoring Summary</h2>
           <div class="divider"></div>
           <div class="muted" style="font-size:13px; line-height:1.45">
-            3 judges score 7 categories (Most Congenial is excluded from numeric scoring).<br>
-            Max per judge: <strong>85</strong> • Max grand total: <strong>255</strong>
+            3 judges score 8 categories (Most Congenial is a non-scored award).<br>
+            Max per judge: <strong>70</strong> • Max grand total: <strong>210</strong>
           </div>
           <div style="height:12px"></div>
           <div class="muted" style="font-size:12px; line-height:1.45">
@@ -875,7 +875,7 @@
         <div class="btnRow" style="justify-content:space-between; align-items:flex-start">
           <div>
             <h2 class="sectionTitle" style="margin-bottom:6px">Final Results</h2>
-            <div class="muted" style="font-size:12px">Ranked by grand total (max 255)</div>
+            <div class="muted" style="font-size:12px">Ranked by grand total (max 210)</div>
           </div>
           <div class="btnRow">
             <button class="btn small" id="btnRefreshResults">↻ Refresh</button>
@@ -1115,15 +1115,16 @@
     // Scored categories only (Most Congenial excluded)
     const CATEGORIES = [
       { id: 'mostAware',      label: 'Most Aware',          max: 10 },
+      { id: 'mostCongenial',  label: 'Most Congenial',      max: 0 },
       { id: 'mostPoised',     label: 'Most Poised',         max: 10 },
       { id: 'bestTalent',     label: 'Best Talent',         max: 10 },
       { id: 'mostPopular',    label: 'Most Popular',        max: 5  },
       { id: 'livingGem',      label: 'The Living Gem',      max: 15 },
       { id: 'mostConfident',  label: 'Most Confident',      max: 10 },
-      { id: 'bestCreative',   label: 'Best Creative Piece', max: 25 },
+      { id: 'bestCreative',   label: 'Best Creative Piece', max: 10 },
     ];
-    const MAX_PER_JUDGE = 85;
-    const MAX_GRAND_TOTAL = 255;
+    const MAX_PER_JUDGE = 70;
+    const MAX_GRAND_TOTAL = 210;
 
     const DEFAULT_STATE = {
       eventName: 'Our Pageant 2026',
