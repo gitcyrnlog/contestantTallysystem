@@ -768,6 +768,31 @@
       flex-shrink:0;
     }
     .scoreSlider{flex:1;min-width:0;width:auto}
+
+    /* === Locked / pre-set score rows === */
+    .scoreRow.locked{
+      background: rgba(255,179,232,.05);
+      border-color: rgba(255,179,232,.20);
+    }
+    .scoreRow.locked .stepBtn:disabled,
+    .scoreRow.locked input[type="range"]:disabled{
+      opacity: 0.38;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+    .lockedBadge{
+      display:inline-flex;
+      align-items:center;
+      gap:4px;
+      background: rgba(255,60,172,.16);
+      border: 1px solid rgba(255,179,232,.38);
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--gold2);
+      white-space:nowrap;
+    }
   </style>
   <!-- Firebase SDK (multi-device score sync) -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -1126,8 +1151,23 @@
     const MAX_PER_JUDGE = 65;
     const MAX_GRAND_TOTAL = 195;
 
+    // Pre-set (locked) scores for The Living Gem — based on placement order.
+    // Contestant indices match the DEFAULT_STATE.contestants array.
+    // Judges CANNOT view or modify these values in the scoring panel.
+    const LOCKED_CATEGORY_SCORES = {
+      'livingGem': {
+        '0': 15,  // Kelsie Spaulding    — 1st place
+        '1': 12,  // Lasheka Hodge       — 2nd place
+        '2': 2,   // Justeena Rhone      — 7th place
+        '3': 10,  // Antoinette Robinson — 3rd place
+        '4': 4,   // Talia Small         — 6th place
+        '5': 6,   // Katia Anglin        — 5th place
+        '6': 8,   // Moiya Richardson    — 4th place
+      }
+    };
+
     const DEFAULT_STATE = {
-      eventName: 'Our Pageant 2026',
+      eventName: 'Miss George Alleyne 2026',
       judges: ['Judge 1', 'Judge 2', 'Judge 3'],
       contestants: [
         { name: 'Kelsie Spaulding',     image: 'images/kelsie.png' },
@@ -1441,7 +1481,14 @@
         const cKey = String(c);
         const saved = (existing[cKey] && typeof existing[cKey] === 'object') ? existing[cKey] : {};
         const card = {};
-        for (const cat of CATEGORIES) card[cat.id] = clamp(safeInt(saved[cat.id], 0), 0, cat.max);
+        for (const cat of CATEGORIES) {
+          const lockedVal = LOCKED_CATEGORY_SCORES[cat.id]?.[cKey];
+          if (lockedVal !== undefined) {
+            card[cat.id] = lockedVal;
+          } else {
+            card[cat.id] = clamp(safeInt(saved[cat.id], 0), 0, cat.max);
+          }
+        }
         draftJudgeScores[cKey] = card;
       }
 
@@ -1517,13 +1564,19 @@
 
       // One score row per category — slider + +/− stepper
       for (const cat of CATEGORIES) {
-        const value = clamp(safeInt(card[cat.id], 0), 0, cat.max);
+        const lockedVal = LOCKED_CATEGORY_SCORES[cat.id]?.[cKey];
+        const isLocked = lockedVal !== undefined;
+        const value = isLocked ? lockedVal : clamp(safeInt(card[cat.id], 0), 0, cat.max);
 
-        const row = el('div', { class: 'scoreRow' });
+        const row = el('div', { class: `scoreRow${isLocked ? ' locked' : ''}` });
 
         const rowHeader = el('div', { class: 'scoreRowHeader' });
         rowHeader.appendChild(el('div', { class: 'label', text: cat.label }));
-        rowHeader.appendChild(el('div', { class: 'max', text: `Max ${cat.max}` }));
+        if (isLocked) {
+          rowHeader.appendChild(el('span', { class: 'lockedBadge', text: '🔒 Pre-set score' }));
+        } else {
+          rowHeader.appendChild(el('div', { class: 'max', text: `Max ${cat.max}` }));
+        }
         row.appendChild(rowHeader);
 
         const stepper = el('div', { class: 'stepperRow' });
@@ -1540,18 +1593,23 @@
         });
         const btnPlus = el('button', { class: 'stepBtn', type: 'button', text: '+' });
 
-        const updateScore = (v) => {
-          const clamped = clamp(v, 0, cat.max);
-          card[cat.id] = clamped;
-          valDisplay.textContent = String(clamped);
-          range.value = String(clamped);
-          totalEl.textContent = `${subtotalFromCard(card)} / ${MAX_PER_JUDGE} pts`;
-          renderJudgeTotals();
-        };
-
-        btnMinus.addEventListener('click', () => updateScore(safeInt(card[cat.id], 0) - 1));
-        btnPlus.addEventListener('click', () => updateScore(safeInt(card[cat.id], 0) + 1));
-        range.addEventListener('input', () => updateScore(safeInt(range.value, 0)));
+        if (isLocked) {
+          btnMinus.disabled = true;
+          btnPlus.disabled = true;
+          range.disabled = true;
+        } else {
+          const updateScore = (v) => {
+            const clamped = clamp(v, 0, cat.max);
+            card[cat.id] = clamped;
+            valDisplay.textContent = String(clamped);
+            range.value = String(clamped);
+            totalEl.textContent = `${subtotalFromCard(card)} / ${MAX_PER_JUDGE} pts`;
+            renderJudgeTotals();
+          };
+          btnMinus.addEventListener('click', () => updateScore(safeInt(card[cat.id], 0) - 1));
+          btnPlus.addEventListener('click', () => updateScore(safeInt(card[cat.id], 0) + 1));
+          range.addEventListener('input', () => updateScore(safeInt(range.value, 0)));
+        }
 
         stepper.appendChild(btnMinus);
         stepper.appendChild(valDisplay);
@@ -1572,7 +1630,14 @@
         const cKey = String(c);
         const card = draftJudgeScores?.[cKey] || {};
         const normalized = {};
-        for (const cat of CATEGORIES) normalized[cat.id] = clamp(safeInt(card[cat.id], 0), 0, cat.max);
+        for (const cat of CATEGORIES) {
+          const lockedVal = LOCKED_CATEGORY_SCORES[cat.id]?.[cKey];
+          if (lockedVal !== undefined) {
+            normalized[cat.id] = lockedVal;
+          } else {
+            normalized[cat.id] = clamp(safeInt(card[cat.id], 0), 0, cat.max);
+          }
+        }
         out[cKey] = normalized;
       }
       state.scores[jKey] = out;
