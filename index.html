@@ -1371,7 +1371,9 @@
         const card = scoreCardFor(judgeIndex, c);
         if (isScoreCardComplete(card)) complete++;
       }
-      return complete;
+      // Pre-determined locked category scores count as 1 pre-completed unit of progress
+      const lockedBonus = Object.keys(LOCKED_CATEGORY_SCORES).length > 0 ? 1 : 0;
+      return Math.min(complete + lockedBonus, state.contestants.length);
     }
 
     function makePortrait(contestantIndex, sizeClass) {
