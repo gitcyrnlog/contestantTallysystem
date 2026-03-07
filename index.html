@@ -797,6 +797,104 @@
       80%{transform:translateX(4px)}
     }
 
+    /* === Provisional standings === */
+    .provCard{
+      border:1px solid var(--border);
+      border-radius:18px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.10));
+      padding:14px 16px;
+      display:flex;
+      align-items:center;
+      gap:14px;
+      transition: border-color .15s ease;
+    }
+    .provCard.lead{
+      border-color: rgba(255,179,232,.75);
+      background: linear-gradient(135deg, rgba(255,60,172,.12), rgba(80,200,255,.06));
+      box-shadow: 0 0 0 2px rgba(255,60,172,.18);
+    }
+    .provRank{
+      font-family:"Playfair Display",serif;
+      font-weight:700;
+      font-size:22px;
+      color:var(--gold2);
+      min-width:38px;
+      text-align:center;
+      flex-shrink:0;
+    }
+    .provInfo{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      flex:1;
+      min-width:0;
+    }
+    .provName{
+      font-weight:900;
+      font-size:15px;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .provMeta{
+      font-size:12px;
+      color:rgba(255,255,255,.68);
+      font-weight:700;
+    }
+    .provBarWrap{
+      height:8px;
+      border-radius:999px;
+      border:1px solid rgba(255,179,232,.22);
+      background:rgba(0,0,0,.18);
+      overflow:hidden;
+      margin-top:4px;
+    }
+    .provBarFill{
+      height:100%;
+      width:0%;
+      background: linear-gradient(90deg,rgba(80,200,255,.85),rgba(255,60,172,1));
+      border-radius:999px;
+      transition:width .55s ease;
+    }
+    .provScore{
+      font-family:"Playfair Display",serif;
+      font-weight:700;
+      font-size:24px;
+      color:var(--gold2);
+      flex-shrink:0;
+      text-align:right;
+      min-width:52px;
+    }
+    .provCatGrid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:8px;
+      margin-top:10px;
+    }
+    .provCatChip{
+      border:1px solid var(--border);
+      border-radius:12px;
+      background:rgba(0,0,0,.10);
+      padding:8px 10px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      font-size:12px;
+    }
+    .provCatChip .catLabel{font-weight:700; color:rgba(255,255,255,.85); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .provCatChip .catVal{font-weight:900; color:var(--gold2); white-space:nowrap;}
+    .provCatChip.locked{border-color:rgba(255,179,232,.30); background:rgba(255,60,172,.06);}
+    .provNote{
+      border:1px solid rgba(255,179,232,.28);
+      background:rgba(255,60,172,.06);
+      border-radius:14px;
+      padding:10px 14px;
+      font-size:12px;
+      color:rgba(255,255,255,.80);
+      line-height:1.5;
+    }
+
     /* === Locked / pre-set score rows === */
     .scoreRow.locked{
       background: rgba(255,179,232,.05);
@@ -852,6 +950,7 @@
 
           <div class="btnRow">
             <button class="btn primary" id="btnResults">View Final Results</button>
+            <button class="btn" id="btnProvisional">🏆 Provisional Standings</button>
             <button class="btn" id="btnSetup">⚙ Configure Event</button>
           </div>
 
@@ -953,6 +1052,26 @@
             <tbody id="resultsBody"></tbody>
           </table>
         </div>
+      </div>
+    </section>
+
+    <!-- Provisional Standings -->
+    <section class="view" id="view-provisional" aria-label="Provisional Standings">
+      <div class="card">
+        <div class="btnRow" style="justify-content:space-between; align-items:flex-start">
+          <div>
+            <h2 class="sectionTitle" style="margin-bottom:6px">&#127942; Provisional Standings</h2>
+            <div class="muted" style="font-size:12px">Live running totals — updates as judges score. Incomplete categories count as 0.</div>
+          </div>
+          <div class="btnRow">
+            <button class="btn small" id="btnRefreshProvisional">↻ Refresh</button>
+            <button class="btn small ghost" id="btnBackFromProvisional">← Back</button>
+          </div>
+        </div>
+        <div style="height:10px"></div>
+        <div class="provNote" id="provNote"></div>
+        <div style="height:14px"></div>
+        <div id="provisionalList" style="display:flex; flex-direction:column; gap:10px;"></div>
       </div>
     </section>
 
@@ -1341,7 +1460,7 @@
 
     function showView(name) {
       if (name !== 'results') unsubscribeResults();
-      const views = ['landing', 'judge', 'results', 'setup'];
+      const views = ['landing', 'judge', 'results', 'setup', 'provisional'];
       for (const v of views) {
         const node = document.getElementById(`view-${v}`);
         node.classList.toggle('active', v === name);
@@ -1350,19 +1469,23 @@
         landing: 'Landing',
         judge: 'Judge Scoring',
         results: 'Results',
-        setup: 'Setup'
+        setup: 'Setup',
+        provisional: 'Provisional Standings',
       };
       $('#viewPill').textContent = labelMap[name] || name;
 
       $('#eventTitle').textContent = state.eventName || 'Pageant Score System';
       $('#eventSubtitle').textContent = name === 'results'
         ? 'Final leaderboard reveal'
+        : name === 'provisional'
+        ? 'Running totals — provisional order'
         : 'Judging & results tally';
 
       if (name === 'landing') renderLanding();
       if (name === 'judge') renderJudgeView();
       if (name === 'results') renderResults();
       if (name === 'setup') renderSetup();
+      if (name === 'provisional') renderProvisional();
 
       window.scrollTo({ top: 0, behavior: 'instant' });
     }
@@ -1376,6 +1499,10 @@
       }
       if (h === 'results') {
         showView('results');
+        return;
+      }
+      if (h === 'provisional') {
+        showView('provisional');
         return;
       }
       if (h === 'setup') {
@@ -1722,6 +1849,138 @@
       renderJudgeTotals();
     }
 
+    // --- Provisional Standings ---
+    function renderProvisional() {
+      const list = $('#provisionalList');
+      const note = $('#provNote');
+      list.innerHTML = '';
+
+      // Build running totals — for each contestant sum:
+      //   locked category scores (all judges see the same locked value)
+      //   + whatever each judge has saved so far for non-locked categories
+      const lockedCatIds = new Set(Object.keys(LOCKED_CATEGORY_SCORES));
+      const nonLockedCats = CATEGORIES.filter(c => !lockedCatIds.has(c.id) && c.max > 0);
+
+      const rows = [];
+      let pendingJudgeCount = 0;
+
+      for (let c = 0; c < state.contestants.length; c++) {
+        const cKey = String(c);
+
+        // Locked totals (same regardless of judge — just add once per locked cat)
+        let lockedTotal = 0;
+        const lockedBreakdown = [];
+        for (const catId of lockedCatIds) {
+          const v = LOCKED_CATEGORY_SCORES[catId]?.[cKey] ?? 0;
+          lockedTotal += v;
+          const cat = CATEGORIES.find(x => x.id === catId);
+          lockedBreakdown.push({ label: cat?.label || catId, val: v, locked: true });
+        }
+
+        // Judge scores for non-locked categories (sum across all 3 judges)
+        let judgeTotal = 0;
+        let judgesWithData = 0;
+        const catTotals = {};
+        for (const cat of nonLockedCats) catTotals[cat.id] = 0;
+
+        for (let j = 0; j < 3; j++) {
+          const card = scoreCardFor(j, c);
+          if (card && typeof card === 'object') {
+            judgesWithData++;
+            for (const cat of nonLockedCats) {
+              const v = clamp(safeInt(card[cat.id], 0), 0, cat.max);
+              catTotals[cat.id] += v;
+              judgeTotal += v;
+            }
+          }
+        }
+
+        if (judgesWithData < 3) pendingJudgeCount++;
+
+        const runningTotal = lockedTotal + judgeTotal;
+
+        const nonLockedBreakdown = nonLockedCats.map(cat => ({
+          label: cat.label,
+          val: catTotals[cat.id],
+          locked: false,
+        }));
+
+        rows.push({
+          contestantIndex: c,
+          name: state.contestants[c].name,
+          runningTotal,
+          lockedTotal,
+          judgeTotal,
+          judgesWithData,
+          breakdown: [...lockedBreakdown, ...nonLockedBreakdown],
+        });
+      }
+
+      rows.sort((a, b) => {
+        if (b.runningTotal !== a.runningTotal) return b.runningTotal - a.runningTotal;
+        return a.name.localeCompare(b.name);
+      });
+
+      const maxTotal = rows[0]?.runningTotal || 1;
+
+      // Note banner
+      const scoredCats = lockedCatIds.size;
+      const totalCats = CATEGORIES.filter(c => c.max > 0).length;
+      note.innerHTML =
+        `<strong>${scoredCats} of ${totalCats} categories</strong> have pre-set scores. ` +
+        (pendingJudgeCount > 0
+          ? `${pendingJudgeCount} contestant(s) still have pending judge scorecards — those categories are showing 0 until scored.`
+          : `All judge scorecards submitted.`) +
+        ` Totals shown are <em>running</em> — not final.`;
+
+      for (let i = 0; i < rows.length; i++) {
+        const r = rows[i];
+        const isLead = i === 0;
+
+        const card = el('div', { class: `provCard${isLead ? ' lead' : ''}` });
+
+        // Rank
+        const rankLabel = i === 0 ? '♛' : String(i + 1);
+        card.appendChild(el('div', { class: 'provRank', text: rankLabel }));
+
+        // Portrait
+        card.appendChild(makePortrait(r.contestantIndex, 'small'));
+
+        // Info block
+        const info = el('div', { class: 'provInfo' });
+        info.appendChild(el('div', { class: 'provName', text: r.name }));
+        info.appendChild(el('div', {
+          class: 'provMeta',
+          text: `${r.lockedTotal} locked + ${r.judgeTotal} judged`,
+        }));
+
+        const barWrap = el('div', { class: 'provBarWrap' });
+        const fill = el('div', { class: 'provBarFill' });
+        barWrap.appendChild(fill);
+        info.appendChild(barWrap);
+
+        // Category breakdown chips
+        const chipGrid = el('div', { class: 'provCatGrid' });
+        for (const b of r.breakdown) {
+          const chip = el('div', { class: `provCatChip${b.locked ? ' locked' : ''}` });
+          chip.appendChild(el('span', { class: 'catLabel', text: b.label + (b.locked ? ' 🔒' : '') }));
+          chip.appendChild(el('span', { class: 'catVal', text: String(b.val) }));
+          chipGrid.appendChild(chip);
+        }
+        info.appendChild(chipGrid);
+        card.appendChild(info);
+
+        // Score
+        card.appendChild(el('div', { class: 'provScore', text: String(r.runningTotal) }));
+
+        list.appendChild(card);
+
+        // Animate bar after paint
+        const pct = maxTotal > 0 ? Math.round((r.runningTotal / maxTotal) * 100) : 0;
+        requestAnimationFrame(() => { fill.style.width = `${pct}%`; });
+      }
+    }
+
     // --- Results ---
     async function renderResults() {
       _buildResultsTable();
@@ -1897,6 +2156,7 @@
     // --- Wire up buttons ---
     function wireUI() {
       $('#btnResults').addEventListener('click', () => location.hash = 'results');
+      $('#btnProvisional').addEventListener('click', () => location.hash = 'provisional');
       $('#btnSetup').addEventListener('click', () => openPinModal());
 
       // PIN modal logic
@@ -1970,6 +2230,9 @@
 
       $('#btnBackFromResults').addEventListener('click', () => location.hash = '');
       $('#btnRefreshResults').addEventListener('click', () => renderResults());
+
+      $('#btnBackFromProvisional').addEventListener('click', () => location.hash = '');
+      $('#btnRefreshProvisional').addEventListener('click', () => renderProvisional());
 
       $('#btnSaveSetup').addEventListener('click', () => {
         applySetup();
